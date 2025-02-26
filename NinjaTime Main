@@ -1,0 +1,312 @@
+local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/discoart/FluentPlus/refs/heads/main/release.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+ 
+local Window = Fluent:CreateWindow({
+    Title = "Ninja Time Script", SubTitle = "By MiweR :D",
+    TabWidth = 160, Size = UDim2.fromOffset(580, 380),
+    Acrylic = true, Theme = "AMOLED"
+})
+ 
+-- Trocar os ícones: (https://lucide.dev/icons/)
+local Tabs = {
+	Player = Window:AddTab({ Title = "Local Player", Icon = "ruler" }),
+    AutoFarm = Window:AddTab({ Title = "Auto Farm", Icon = "gem" }),
+	Teleport = Window:AddTab({ Title = "Teleport", Icon = "plane" }),
+	ServerHop = Window:AddTab({ Title = "Server Hop", Icon = "book" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
+ 
+-- Player References
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local Humanoid = char:WaitForChild("Humanoid")
+ 
+-- Services
+local uis = game:GetService("UserInputService")
+
+local Slider = Tabs.Player:AddSlider("Slider", 
+{
+    Title = "WalkSpeed",
+    Description = "WalkSpeed of the player",
+    Default = 5,
+    Min = 16, -- Corrigido: Min geralmente é menor que Max, mas 16 parece ser o padrão do Roblox
+    Max = 500,
+    Rounding = 1,
+    Callback = function(Value)
+        -- Quando o slider é ajustado, atualiza a WalkSpeed apenas se permitido
+        if WalkSpeedPermitido then
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+        end
+    end
+})
+ 
+local WalkSpeedPermitido = false -- Declarado fora para ser acessível por ambos
+ 
+local Keybind = Tabs.Player:AddKeybind("Keybind", {
+    Title = "Activate walkspeed",
+    Mode = "Toggle", -- Mantido como Toggle para ligar/desligar
+    Default = "N", -- Tecla padrão "N"
+    Callback = function(Value)
+        -- Value é true quando ativado, false quando desativado
+        WalkSpeedPermitido = Value
+        if WalkSpeedPermitido then
+            -- Aplica a velocidade do slider quando ativado
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Slider.Value
+        else
+            -- Reseta para o padrão do Roblox (16) quando desativado
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16
+        end
+    end,
+    ChangedCallback = function(New)
+        -- Opcional: Não é necessário inverter WalkSpeedPermitido aqui, mas mantive como exemplo
+        print("Keybind alterado para: ", New.Name)
+    end
+})
+
+local HitStackSection = Tabs.AutoFarm:AddSection("Hit Stack")
+
+getgenv().stackm1 = false
+
+local hitStack = 1
+local cooldownTime = 1
+
+local function calcularDistancia(cframe1, cframe2)
+    return (cframe1.Position - cframe2.Position).magnitude
+end
+
+local HitStackSlider = Tabs.AutoFarm:AddSlider("HitStackSlider", {
+    Title = "Hit Stack",
+    Description = "Hit amount",
+    Default = hitStack,
+    Min = 1,
+    Max = 18,
+    Rounding = 1,
+    Callback = function(Value)
+        hitStack = Value
+    end
+})
+
+local CooldownSlider = Tabs.AutoFarm:AddSlider("CooldownSlider", {
+    Title = "Cooldown",
+    Description = "Stack Cooldown",
+    Default = cooldownTime,
+    Min = 0.1,
+    Max = 1,
+    Rounding = 1,
+    Callback = function(Value)
+        cooldownTime = Value
+    end
+})
+
+local Toggle = Tabs.AutoFarm:AddToggle("StackM1", { Title = "Stack M1", Default = false })
+
+Toggle:OnChanged(function()
+    getgenv().stackm1 = Toggle.Value
+
+    if getgenv().stackm1 then
+        task.spawn(function()
+            local localPlayer = game.Players.LocalPlayer
+            local jogador = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+            if not jogador then
+                return
+            end
+
+            while getgenv().stackm1 do
+                local npcsDentroDoAlcance = {}
+
+                -- Busca por mobs em workspace.Entities
+                for _, entity in ipairs(workspace.Entities:GetChildren()) do
+                    -- Exclui o jogador comparando o nome
+                    if entity.Name ~= localPlayer.Name and entity:FindFirstChild("HumanoidRootPart") then
+                        local humanoidRootPart = entity:FindFirstChild("HumanoidRootPart")
+                        if calcularDistancia(jogador.CFrame, humanoidRootPart.CFrame) < 100 then
+                            table.insert(npcsDentroDoAlcance, entity)
+                        end
+                    end
+                end
+
+                if #npcsDentroDoAlcance == 0 then
+                    wait(0.5)
+                else
+                    local combatRemote = game:GetService("ReplicatedStorage"):WaitForChild("Modules", 9e9):WaitForChild("Services", 9e9):WaitForChild("RNet", 9e9):WaitForChild("Bridges", 9e9):WaitForChild("CombatEvent_Event", 9e9)
+
+                    for _, mob in ipairs(npcsDentroDoAlcance) do
+                        local args = {
+                            [1] = {
+                                [1] = "M1",
+                                [2] = {
+                                    ["Victim"] = mob, -- Model do mob encontrado
+                                    ["Character"] = localPlayer.Character, -- Model do jogador
+                                    ["Action"] = "HitConnection",
+                                    ["Tick"] = 1,
+                                    ["Air"] = false
+                                }
+                            }
+                        }
+
+                        -- Dispara o evento hitStack vezes para cada mob
+                        for _ = 1, hitStack do
+                            combatRemote:FireServer(unpack(args))
+                        end
+                        wait(cooldownTime) -- Cooldown entre stacks
+                    end
+                end
+            end
+        end)
+    end
+end)
+ 
+local Dropdown = Tabs.Teleport:AddDropdown("Dropdown", {
+    Title = "Teleport",
+    Description = "Teleport to a Region in the map",
+    Values = {"Ishikage", "Logs", "Receptionist", "Bones Hideout"},
+    Multi = false,
+    Default = nil,
+})
+ 
+Dropdown:OnChanged(function(Value)
+	if Value == "Ishikage" then
+		hrp.CFrame = CFrame.new(1361.6407470703125, 132.0932159423828, -121.28382110595703)
+	elseif Value == "Logs" then
+		hrp.CFrame = CFrame.new(1080.6617431640625, 8.393749237060547, -1228.8092041015625)
+	elseif Value == "Receptionist" then
+		hrp.CFrame = CFrame.new(211.26376342773438, 44.312278747558594, 610.1218872070312)
+	elseif Value == "Bones Hideout" then
+		hrp.CFrame = CFrame.new(2329.343994140625, 13.299999237060547, 4262.64892578125)
+	end
+end)
+ 
+-- Adicionando os botões na aba Teleport (mantendo o código original)
+Tabs.ServerHop:AddButton({
+    Title = "Rejoin Server",
+    Description = "Rejoin the current game server",
+    Callback = function()
+        Fluent:Notify({
+            Title = "Success!",
+            Content = "Rejoining the server",
+            Duration = 3 -- Set to nil to make the notification not disappear
+        })
+ 
+        task.wait(1.5)
+ 
+        local TeleportService = game:GetService("TeleportService")
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+ 
+        local placeId = game.PlaceId
+        local jobId = game.JobId
+ 
+        TeleportService:TeleportToPlaceInstance(placeId, jobId, player)
+    end
+})
+ 
+Tabs.ServerHop:AddButton({
+    Title = "Server low hop",
+    Description = "Teleport to an EMPTY server",
+    Callback = function()
+        Fluent:Notify({
+            Title = "Success!",
+            Content = "Teleporting to a server with low players",
+            Duration = 3 -- Set to nil to make the notification not disappear
+        })
+ 
+        task.wait(1.5)
+ 
+        local Http = game:GetService("HttpService")
+        local TPS = game:GetService("TeleportService")
+        local Api = "https://games.roblox.com/v1/games/"
+ 
+        local _place = game.PlaceId
+        local _servers = Api.._place.."/servers/Public?sortOrder=Asc&limit=100"
+        function ListServers(cursor)
+            local Raw = game:HttpGet(_servers .. ((cursor and "&cursor="..cursor) or ""))
+            return Http:JSONDecode(Raw)
+        end
+ 
+        local Server, Next; repeat
+            local Servers = ListServers(Next)
+            Server = Servers.data[1]
+            Next = Servers.nextPageCursor
+        until Server
+ 
+        TPS:TeleportToPlaceInstance(_place, Server.id, game:GetService('Players').LocalPlayer)
+    end
+})
+ 
+Tabs.ServerHop:AddButton({
+    Title = "Random Server Hop",
+    Description = "Teleport to a random different server",
+    Callback = function()
+        Fluent:Notify({
+            Title = "Success!",
+            Content = "Teleporting to a random different server...",
+            Duration = 3 -- Notificação desaparece após 3 segundos
+        })
+ 
+        task.wait(1.5) -- Pequena pausa antes de teleportar
+ 
+        local TeleportService = game:GetService("TeleportService")
+        local Players = game:GetService("Players")
+        local HttpService = game:GetService("HttpService")
+        local player = Players.LocalPlayer
+ 
+        local placeId = game.PlaceId
+        local currentJobId = game.JobId
+ 
+        -- URL da API do Roblox para listar servidores públicos
+        local Api = "https://games.roblox.com/v1/games/"
+        local _servers = Api .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
+ 
+        -- Função para listar servidores com cursor (paginção)
+        local function ListServers(cursor)
+            local Raw = game:HttpGet(_servers .. ((cursor and "&cursor=" .. cursor) or ""))
+            return HttpService:JSONDecode(Raw)
+        end
+ 
+        local allServers = {}
+        local Next = nil
+ 
+        -- Coletar todos os servidores disponíveis
+        repeat
+            local Servers = ListServers(Next)
+            for _, server in pairs(Servers.data) do
+                -- Adicionar apenas servidores com jogadores (evitar servidores vazios, se desejar)
+                if server.id ~= currentJobId and server.playing ~= 0 then -- Excluir o servidor atual e servidores vazios
+                    table.insert(allServers, server)
+                end
+            end
+            Next = Servers.nextPageCursor
+        until not Next or #allServers >= 10 -- Limitar para evitar sobrecarga (ajuste conforme necessário)
+ 
+        if #allServers > 0 then
+            -- Escolher um servidor aleatório da lista
+            local randomServer = allServers[math.random(1, #allServers)]
+            TeleportService:TeleportToPlaceInstance(placeId, randomServer.id, player)
+        else
+            Fluent:Notify({
+                Title = "Error!",
+                Content = "No available servers found. Try again later.",
+                Duration = 5
+            })
+            warn("Nenhum servidor disponível encontrado para teleportar.")
+        end
+    end
+})
+ 
+Window:SelectTab(1)
+ 
+-- Settings Tab [[ -- SaveManager (Allows you to have a configuration system) -- InterfaceManager (Allows you to have a interface management system)
+SaveManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+SaveManager:SetFolder("Fluent UI Settings")
+SaveManager:LoadAutoloadConfig()
+ 
+InterfaceManager:SetLibrary(Fluent)
+InterfaceManager:SetFolder("Fluent UI Settings")
+ 
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
