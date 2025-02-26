@@ -94,7 +94,7 @@ local CooldownSlider = Tabs.AutoFarm:AddSlider("CooldownSlider", {
     Default = cooldownTime,
     Min = 0.1,
     Max = 1,
-    Rounding = 1,
+    Rounding = 1000,
     Callback = function(Value)
         cooldownTime = Value
     end
