@@ -79,7 +79,7 @@ local HitStackSlider = Tabs.AutoFarm:AddSlider("HitStackSlider", {
     Default = 1,
     Min = 1000,
     Max = 50000,
-    Rounding = 1,
+    Rounding = 1000,
     Callback = function(Value)
         hitStack = Value
     end
