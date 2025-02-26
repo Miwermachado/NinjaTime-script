@@ -79,11 +79,9 @@ local HitStackSlider = Tabs.AutoFarm:AddSlider("HitStackSlider", {
     Default = 1000,
     Min = 1000,
     Max = 50000,
+    Rounding = 0,
     Callback = function(Value)
-        -- Arredonda para o múltiplo de 1000 mais próximo
-        hitStack = math.floor(Value / 1000 + 0.5) * 1000
-        -- Garante que fique dentro dos limites
-        hitStack = math.clamp(hitStack, 1000, 50000)
+	HitStack = Value
     end
 })
 
