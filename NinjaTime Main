@@ -76,10 +76,10 @@ end
 local HitStackSlider = Tabs.AutoFarm:AddSlider("HitStackSlider", {
     Title = "Hit Stack",
     Description = "Hit amount",
-    Default = 1,
+    Default = 1000,
     Min = 1000,
     Max = 50000,
-    Rounding = 1000,
+    Increment = 1000, -- Define o passo como 1000
     Callback = function(Value)
         hitStack = Value
     end
