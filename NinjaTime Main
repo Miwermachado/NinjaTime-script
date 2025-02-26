@@ -33,7 +33,7 @@ local Slider = Tabs.Player:AddSlider("Slider",
     Default = 5,
     Min = 16, -- Corrigido: Min geralmente é menor que Max, mas 16 parece ser o padrão do Roblox
     Max = 500,
-    Rounding = 1,
+    Rounding = 0,
     Callback = function(Value)
         -- Quando o slider é ajustado, atualiza a WalkSpeed apenas se permitido
         if WalkSpeedPermitido then
@@ -82,7 +82,7 @@ local HitStackSlider = Tabs.AutoFarm:AddSlider("HitStackSlider", {
     Default = hitStack,
     Min = 1,
     Max = 18,
-    Rounding = 10,
+    Rounding = 0,
     Callback = function(Value)
         hitStack = Value
     end
