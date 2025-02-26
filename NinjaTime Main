@@ -69,9 +69,6 @@ local HitStackSection = Tabs.AutoFarm:AddSection("Hit Stack")
 
 getgenv().stackm1 = false
 
-local hitStack = 1
-local cooldownTime = 1
-
 local function calcularDistancia(cframe1, cframe2)
     return (cframe1.Position - cframe2.Position).magnitude
 end
@@ -79,7 +76,7 @@ end
 local HitStackSlider = Tabs.AutoFarm:AddSlider("HitStackSlider", {
     Title = "Hit Stack",
     Description = "Hit amount",
-    Default = hitStack,
+    Default = 1,
     Min = 1,
     Max = 18,
     Rounding = 0,
@@ -91,10 +88,10 @@ local HitStackSlider = Tabs.AutoFarm:AddSlider("HitStackSlider", {
 local CooldownSlider = Tabs.AutoFarm:AddSlider("CooldownSlider", {
     Title = "Cooldown",
     Description = "Stack Cooldown",
-    Default = cooldownTime,
+    Default = 1,
     Min = 0.1,
     Max = 1,
-    Rounding = 1000,
+    Rounding = 1,
     Callback = function(Value)
         cooldownTime = Value
     end
